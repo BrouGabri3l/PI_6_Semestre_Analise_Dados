@@ -68,8 +68,113 @@ def recommend_route():
         'recommendations': details
     })
 
+@app.route('/games', methods=['GET'])
+def list_games():
+    """
+    Lista todos os jogos paginados.
+    ---
+    tags:
+      - games
+    parameters:
+      - in: query
+        name: page
+        type: integer
+        required: false
+        default: 1
+        description: Página a ser retornada (1-indexed)
+      - in: query
+        name: per_page
+        type: integer
+        required: false
+        default: 20
+        description: Número de itens por página
+    responses:
+      200:
+        description: Lista paginada de jogos
+        schema:
+          type: object
+          properties:
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total:
+              type: integer
+            total_pages:
+              type: integer
+            games:
+              type: array
+              items:
+                type: object
+                properties:
+                  appid:
+                    type: integer
+                  name:
+                    type: string
+                  release_date:
+                    type: string
+                  short_description:
+                    type: string
+                  header_image:
+                    type: string
+                  publishers:
+                    type: array
+                    items: { type: string }
+                  supported_languages:
+                    type: array
+                    items: { type: string }
+                  genres:
+                    type: array
+                    items: { type: string }
+                  categories:
+                    type: array
+                    items: { type: string }
+                  windows:
+                    type: boolean
+                  linux:
+                    type: boolean
+                  mac:
+                    type: boolean
+    """
 
-@app.route('/game/<int:game_id>', methods=['GET'])
+    page     = max(int(request.args.get('page', 1)), 1)
+    per_page = max(int(request.args.get('per_page', 20)), 1)
+
+    df = reco.df
+    total = len(df)
+    total_pages = (total + per_page - 1) // per_page
+
+    start = (page - 1) * per_page
+    end   = start + per_page
+
+    subset = df.iloc[start:end]
+    games = []
+    for _, row in subset.iterrows():
+        games.append({
+            'appid':      int(row.appid),
+            'name':       row["name"],
+            'release_date': row.release_date,
+            # TODO: Ajustar para remover atributos abaixo apenas no treinamento e recomendação, manter no arquivo para uso nas rotas GET
+            # 'short_description': row.short_description,
+            # 'header_image': row.header_image,
+            'publishers': row.publishers,
+            'supported_languages': row.supported_languages,
+            'genres':     row.genres_list,
+            'categories': row.categories_list,
+            'windows':    bool(row.windows),
+            'linux':      bool(row.linux),
+            'mac':        bool(row.mac)
+        })
+
+    return jsonify({
+        'page':        page,
+        'per_page':    per_page,
+        'total':       total,
+        'total_pages': total_pages,
+        'games':       games
+    })
+
+@app.route('/games/<int:game_id>', methods=['GET'])
 def game_route(game_id):
     """
     Consulta de jogo por ID.

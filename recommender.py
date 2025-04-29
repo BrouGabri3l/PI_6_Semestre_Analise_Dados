@@ -10,12 +10,15 @@ from build_recommender import WEIGHTS
 class Recommender:
     def __init__(self, data_path='cleaned.csv', model_dir='models', top_k=5):
         df = pd.read_csv(data_path)
+        #removendo colunas vazias
         df = df.dropna(subset=['genres','categories','tags','windows','linux','mac']).reset_index(drop=True)
         df['genres_list']     = df['genres'].apply(ast.literal_eval)
         df['categories_list'] = df['categories'].apply(ast.literal_eval)
         df['tags_list']       = df['tags'].apply(lambda t: list(ast.literal_eval(t).keys()))
         self.df = df
         self.top_k = top_k
+
+        # Carregamento de arquivos
 
         self.mlb_genres     = pickle.load(open(os.path.join(model_dir,'mlb_genres.pkl'),'rb'))
         self.mlb_categories = pickle.load(open(os.path.join(model_dir,'mlb_categories.pkl'),'rb'))
@@ -25,6 +28,7 @@ class Recommender:
         self.pca            = pickle.load(open(os.path.join(model_dir,'pca.pkl'),'rb'))
         self.knn            = pickle.load(open(os.path.join(model_dir,'knn_pca_tags.pkl'),'rb'))
 
+        # Binarização
         G = self.mlb_genres.transform(df['genres_list']) * WEIGHTS['genres']
         C = self.mlb_categories.transform(df['categories_list']) * WEIGHTS['categories']
         Tb = self.mlb_tags.transform(df['tags_list'])
