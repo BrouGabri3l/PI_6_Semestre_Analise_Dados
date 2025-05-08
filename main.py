@@ -50,7 +50,7 @@ def recommend_route():
         user_platforms=data.get('platforms', [])
     )
     # Filtrar detalhes diretamente do dataset
-    rec_rows = reco.df[reco.df['appid'].isin(rec_ids)]
+    rec_rows = reco.database_df[reco.database_df['appid'].isin(rec_ids)]
     # Construir lista de dicionários com campos relevantes
     details = []
     for _, row in rec_rows.iterrows():
@@ -140,7 +140,7 @@ def list_games():
     page     = max(int(request.args.get('page', 1)), 1)
     per_page = max(int(request.args.get('per_page', 20)), 1)
 
-    df = reco.df
+    df = reco.database_df
     total = len(df)
     total_pages = (total + per_page - 1) // per_page
 
@@ -149,21 +149,19 @@ def list_games():
 
     subset = df.iloc[start:end]
     games = []
+
     for _, row in subset.iterrows():
         games.append({
             'appid':      int(row.appid),
             'name':       row["name"],
             'release_date': row.release_date,
-            # TODO: Ajustar para remover atributos abaixo apenas no treinamento e recomendação, manter no arquivo para uso nas rotas GET
-            # 'short_description': row.short_description,
-            # 'header_image': row.header_image,
+            'short_description': row.short_description,
+            'header_image': row.header_image,
             'publishers': row.publishers,
             'supported_languages': row.supported_languages,
             'genres':     row.genres_list,
             'categories': row.categories_list,
-            'windows':    bool(row.windows),
-            'linux':      bool(row.linux),
-            'mac':        bool(row.mac)
+            **{col: bool(row[col]) for col in ['windows','linux','mac'] if col in row}
         })
 
     return jsonify({
@@ -192,7 +190,7 @@ def game_route(game_id):
       404:
         description: Não encontrado
     """
-    df = reco.df
+    df = reco.database_df
     row = df[df['appid'] == game_id]
 
     if row.empty:
@@ -202,6 +200,11 @@ def game_route(game_id):
     return jsonify({
         'appid': int(g["appid"]),
         'name': g["name"],
+        'release_date': g['release_date'],
+        'short_description': g['short_description'],
+        'header_image': g['header_image'],
+        'publishers': g['publishers'],
+        'supported_languages': g['supported_languages'],
         'genres': g["genres"],
         'categories': g["categories"],
         **{col: bool(g[col]) for col in ['windows','linux','mac'] if col in g}

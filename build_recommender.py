@@ -22,6 +22,7 @@ WEIGHTS = {
 def load_data(path):
     df = pd.read_csv(path)
     df = df.dropna(subset=['genres','categories','tags','windows','linux','mac']).reset_index(drop=True)
+
     df['genres_list']     = df['genres'].apply(ast.literal_eval)
     df['categories_list'] = df['categories'].apply(ast.literal_eval)
     df['tags_list']       = df['tags'].apply(lambda t: list(ast.literal_eval(t).keys()))
