@@ -48,6 +48,10 @@ def recommend_route():
               type: array
               items:
                 type: string
+            publishers:
+              type: array
+              items:
+                type: string
             game_styles:
               type: array
               items:
@@ -69,7 +73,8 @@ def recommend_route():
         user_played_ids=data.get('played_games_ids', []),
         # favorite_games=data.get('favorite_games')
         user_platforms=data.get('operational_systems', []),
-        played_tags=data.get('game_styles', []) + data.get('camera_perspective', [])
+        played_tags=data.get('game_styles', []) + data.get('camera_perspective', []),
+        user_publishers=data.get("publishers", [])
         # user_game_modes=data.get('game_modes', []),
         # user_game_styles=data.get('game_styles', []),
         # user_camera_perspective=data.get('camera_perspective', [])

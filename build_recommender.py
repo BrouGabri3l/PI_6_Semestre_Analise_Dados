@@ -7,6 +7,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction import FeatureHasher
 from utils import WEIGHTS
 data_path = 'cleaned.csv'
 model_dir = 'models'
@@ -17,9 +18,9 @@ def load_data(path):
     df['genres_list']     = df['genres'].apply(ast.literal_eval)
     df['categories_list'] = df['categories'].apply(ast.literal_eval)
     df['tags_list'] = df['tags_list'].apply(lambda t:list(ast.literal_eval(t)))
-    
-    print(df['genres_list'].explode().unique())
-  
+    df['publisher_list']  = df['publishers'].apply(ast.literal_eval)
+
+    print(df['publisher_list'])
     return df
 
 df = load_data(data_path)
@@ -37,14 +38,17 @@ tfidf = TfidfTransformer()
 T = tfidf.fit_transform(T_binary).toarray() * WEIGHTS['tags']
 P = df[['windows','linux','mac']].astype(int).values * WEIGHTS['platforms']
 
-features = np.hstack([G, C, T, P])
+HASher   = FeatureHasher(n_features=128, input_type='string')
+Pub_hash = HASher.transform(df['publisher_list']).toarray()  # gera (n_samples,128)
+Pub_hash = Pub_hash
+features = np.hstack([G, C, T, P, Pub_hash])
 scaler = StandardScaler().fit(features)
 X_scaled = scaler.transform(features)
 
 pca = PCA(n_components=50)
 X_pca = pca.fit_transform(X_scaled)
 
-knn = NearestNeighbors(n_neighbors=6, metric='cosine', algorithm='brute')
+knn = NearestNeighbors(n_neighbors=10, metric='cosine', algorithm='brute')
 knn.fit(X_pca)
 
 
@@ -68,4 +72,5 @@ pickle.dump(scaler,         open(os.path.join(model_dir,'scaler.pkl'),'wb'))
 pickle.dump(tfidf,          open(os.path.join(model_dir,'tfidf_tags.pkl'),'wb'))
 pickle.dump(pca,            open(os.path.join(model_dir,'pca.pkl'),'wb'))
 pickle.dump(knn,            open(os.path.join(model_dir,'knn_pca_tags.pkl'),'wb'))
+pickle.dump(HASher ,  open(os.path.join(model_dir,'HASher .pkl'),'wb'))
 print('Modelos avaliados e salvos em', model_dir)

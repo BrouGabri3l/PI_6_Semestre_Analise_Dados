@@ -46,13 +46,14 @@ print(training_dataset)
 # Retirando os valores que sao arrays vazios do campo publicantes / desenvolvedoras
 training_dataset['publishers'] = training_dataset['publishers'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
 training_dataset = training_dataset[training_dataset['publishers'].apply(lambda x: isinstance(x, list) and len(x) > 0)]
+
 print(training_dataset)
 
 training_dataset = training_dataset.dropna(subset=['genres','categories','tags','windows','linux','mac']).reset_index(drop=True)
 
 training_dataset['genres_list']     = training_dataset['genres']
 training_dataset['categories_list'] = training_dataset['categories']
+training_dataset['publisher_list'] = training_dataset['publishers']
 training_dataset['tags_list'] = training_dataset['tags'].apply(lambda t:list(ast.literal_eval(t)))
-
 
 training_dataset.to_csv("cleaned.csv")
