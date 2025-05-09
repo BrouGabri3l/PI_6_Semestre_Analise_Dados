@@ -7,39 +7,34 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.feature_extraction.text import TfidfTransformer
-
+from utils import WEIGHTS
 data_path = 'cleaned.csv'
 model_dir = 'models'
 os.makedirs(model_dir, exist_ok=True)
 
-WEIGHTS = {
-    'genres': 1.0,
-    'categories': 1.5,
-    'tags': 2.0,
-    'platforms': 0.8
-}
-
 def load_data(path):
     df = pd.read_csv(path)
-    df = df.dropna(subset=['genres','categories','tags','windows','linux','mac']).reset_index(drop=True)
-
     df['genres_list']     = df['genres'].apply(ast.literal_eval)
     df['categories_list'] = df['categories'].apply(ast.literal_eval)
-    df['tags_list']       = df['tags'].apply(lambda t: list(ast.literal_eval(t).keys()))
+    df['tags_list'] = df['tags_list'].apply(lambda t:list(ast.literal_eval(t)))
+    
+    print(df['genres_list'].explode().unique())
+  
     return df
 
 df = load_data(data_path)
 
 mlb_genres     = MultiLabelBinarizer()
 G = mlb_genres.fit_transform(df['genres_list']) * WEIGHTS['genres']
+
 mlb_categories = MultiLabelBinarizer()
 C = mlb_categories.fit_transform(df['categories_list']) * WEIGHTS['categories']
+
 mlb_tags       = MultiLabelBinarizer()
 T_binary = mlb_tags.fit_transform(df['tags_list'])
 
 tfidf = TfidfTransformer()
 T = tfidf.fit_transform(T_binary).toarray() * WEIGHTS['tags']
-
 P = df[['windows','linux','mac']].astype(int).values * WEIGHTS['platforms']
 
 features = np.hstack([G, C, T, P])

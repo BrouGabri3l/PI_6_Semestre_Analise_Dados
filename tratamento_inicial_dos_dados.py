@@ -16,7 +16,7 @@ training_dataset = original_dataset
 
 # Pegando apenas as colunas essenciais
 #training_dataset = training_dataset.drop(columns=['price','dlc_count', 'required_age', 'detailed_description', 'about_the_game', 'short_description', 'reviews', 'header_image', 'website', 'support_url', 'support_email', 'metacritic_url', 'metacritic_score', 'achievements', 'notes', 'packages','developers','publishers', 'screenshots', 'movies', 'user_score', 'score_rank', 'estimated_owners', 'average_playtime_forever', 'average_playtime_2weeks', 'median_playtime_forever', 'median_playtime_2weeks', 'discount', 'peak_ccu', 'num_reviews_recent', 'pct_pos_recent'])
-training_dataset = training_dataset.drop(columns=['price','dlc_count', 'required_age', 'detailed_description', 'about_the_game', 'reviews', 'website', 'support_url', 'support_email', 'metacritic_url', 'metacritic_score', 'achievements', 'notes', 'packages', 'screenshots', 'developers', 'movies', 'user_score', 'score_rank', 'estimated_owners', 'average_playtime_forever', 'average_playtime_2weeks', 'median_playtime_forever', 'median_playtime_2weeks', 'discount', 'peak_ccu', 'num_reviews_recent', 'pct_pos_recent'])
+training_dataset = training_dataset.drop(columns=['price', 'dlc_count', 'positive', 'negative', 'pct_pos_total','num_reviews_total', 'release_date', 'required_age', 'detailed_description', 'about_the_game', 'reviews', 'website', 'support_url', 'support_email', 'metacritic_url', 'metacritic_score', 'achievements', 'notes', 'packages', 'screenshots', 'developers', 'movies', 'user_score', 'score_rank', 'estimated_owners', 'average_playtime_forever', 'average_playtime_2weeks', 'median_playtime_forever', 'median_playtime_2weeks', 'discount', 'peak_ccu', 'num_reviews_recent', 'pct_pos_recent'])
 
 print(training_dataset)
 
@@ -30,10 +30,6 @@ training_dataset = training_dataset.drop_duplicates()
 #Contando duplicados
 duplicated = training_dataset.duplicated()
 duplicated.sum()
-
-# Retirando os valores que 0 ou menores que ele para nao atrapalhar na recomendacao
-training_dataset = training_dataset.query('recommendations > 0 and positive > 0 and negative > 0 and pct_pos_total > 0 and num_reviews_total > 0')
-print(training_dataset)
 
 import ast
 
@@ -51,5 +47,12 @@ print(training_dataset)
 training_dataset['publishers'] = training_dataset['publishers'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
 training_dataset = training_dataset[training_dataset['publishers'].apply(lambda x: isinstance(x, list) and len(x) > 0)]
 print(training_dataset)
+
+training_dataset = training_dataset.dropna(subset=['genres','categories','tags','windows','linux','mac']).reset_index(drop=True)
+
+training_dataset['genres_list']     = training_dataset['genres']
+training_dataset['categories_list'] = training_dataset['categories']
+training_dataset['tags_list'] = training_dataset['tags'].apply(lambda t:list(ast.literal_eval(t)))
+
 
 training_dataset.to_csv("cleaned.csv")

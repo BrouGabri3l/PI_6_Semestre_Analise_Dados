@@ -28,15 +28,35 @@ def recommend_route():
               type: array
               items:
                 type: string
-            played:
+            suggested_games_ids:
               type: array
               items:
                 type: integer
-            platforms:
+            played_games_ids:
+              type: array
+              items:
+                type: integer
+            played_games:
               type: array
               items:
                 type: string
-          required: [genres, categories, played, platforms]
+            operational_systems:
+              type: array
+              items:
+                type: string
+            game_modes:
+              type: array
+              items:
+                type: string
+            game_styles:
+              type: array
+              items:
+                type: string 
+            camera_perspective:
+              type: array
+              items:
+                type: string
+          required: [genres, categories, played_games_ids, operational_systems]
     responses:
       200:
         description: Lista de appids e detalhes dos jogos recomendados
@@ -46,8 +66,14 @@ def recommend_route():
     rec_ids = reco.recommend(
         user_genres=data.get('genres', []),
         user_categories=data.get('categories', []),
-        user_played_ids=data.get('played', []),
-        user_platforms=data.get('platforms', [])
+        user_played_ids=data.get('played_games_ids', []),
+        # favorite_games=data.get('favorite_games')
+        user_platforms=data.get('operational_systems', []),
+        played_tags=data.get('game_styles', []) + data.get('camera_perspective', [])
+        # user_game_modes=data.get('game_modes', []),
+        # user_game_styles=data.get('game_styles', []),
+        # user_camera_perspective=data.get('camera_perspective', [])
+
     )
     # Filtrar detalhes diretamente do dataset
     rec_rows = reco.database_df[reco.database_df['appid'].isin(rec_ids)]
@@ -59,10 +85,9 @@ def recommend_route():
             'name': row["name"],
             'genres': row.genres_list,
             'categories': row.categories_list,
-            'windows': bool(row.windows),
-            'linux': bool(row.linux),
-            'mac': bool(row.mac)
-        })
+            'operational_systems':{ **{col: bool(row[col]) for col in ['windows','linux','mac'] if col in row}}
+        }
+)
     return jsonify({
         'recommendation_ids': rec_ids,
         'recommendations': details
@@ -129,12 +154,9 @@ def list_games():
                   categories:
                     type: array
                     items: { type: string }
-                  windows:
-                    type: boolean
-                  linux:
-                    type: boolean
-                  mac:
-                    type: boolean
+                  operational_systems:
+                    type: array
+                    items: { type: string }
     """
 
     page     = max(int(request.args.get('page', 1)), 1)
@@ -154,14 +176,13 @@ def list_games():
         games.append({
             'appid':      int(row.appid),
             'name':       row["name"],
-            'release_date': row.release_date,
             'short_description': row.short_description,
             'header_image': row.header_image,
             'publishers': row.publishers,
             'supported_languages': row.supported_languages,
             'genres':     row.genres_list,
             'categories': row.categories_list,
-            **{col: bool(row[col]) for col in ['windows','linux','mac'] if col in row}
+             'operational_systems':{ **{col: bool(row[col]) for col in ['windows','linux','mac'] if col in row}}
         })
 
     return jsonify({
@@ -196,18 +217,17 @@ def game_route(game_id):
     if row.empty:
         return jsonify({'error': 'Jogo não encontrado'}), 404
     g = row.iloc[0]
-  
+    
     return jsonify({
         'appid': int(g["appid"]),
         'name': g["name"],
-        'release_date': g['release_date'],
         'short_description': g['short_description'],
         'header_image': g['header_image'],
         'publishers': g['publishers'],
         'supported_languages': g['supported_languages'],
-        'genres': g["genres"],
-        'categories': g["categories"],
-        **{col: bool(g[col]) for col in ['windows','linux','mac'] if col in g}
+        'genres': g["genres_list"],
+        'categories': g["categories_list"],
+        'operational_systems': { **{col: bool(g[col]) for col in ['windows','linux','mac'] if col in g}}
     })
 
 if __name__ == '__main__':

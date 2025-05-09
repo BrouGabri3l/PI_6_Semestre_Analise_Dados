@@ -5,19 +5,13 @@ import numpy as np
 import pickle
 
 from sklearn.metrics.pairwise import cosine_distances
-from build_recommender import WEIGHTS
+from utils import WEIGHTS
 
 class Recommender:
     def __init__(self, data_path='cleaned.csv', model_dir='models', top_k=5):
         database_df = pd.read_csv(data_path)
 
         
-        #removendo colunas vazias
-        database_df = database_df.dropna(subset=['genres','categories','tags','windows','linux','mac']).reset_index(drop=True)
-        database_df['genres_list']     = database_df['genres'].apply(ast.literal_eval)
-        database_df['categories_list'] = database_df['categories'].apply(ast.literal_eval)
-        database_df['tags_list']       = database_df['tags'].apply(lambda t: list(ast.literal_eval(t).keys()))
-
         df = database_df.drop(columns=["header_image", "short_description"])
         self.df = df
         self.database_df = database_df
@@ -47,11 +41,10 @@ class Recommender:
         X_scaled = self.scaler.transform(features)
         self.X_pca = self.pca.transform(X_scaled)
 
-    def recommend(self, user_genres, user_categories, user_played_ids, user_platforms):
+    def recommend(self, user_genres, user_categories, user_played_ids, user_platforms, played_tags):
         ug = self.mlb_genres.transform([user_genres]) * WEIGHTS['genres']
         uc = self.mlb_categories.transform([user_categories]) * WEIGHTS['categories']
         
-        played_tags = []
         for pid in user_played_ids:
             row = self.df[self.df['appid'] == pid]
             if not row.empty:
