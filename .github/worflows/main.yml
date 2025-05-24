@@ -1,0 +1,33 @@
+name: Deploy the code
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: "3.8"
+      - uses: aws-actions/setup-sam@v2
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Install Serverless Framework
+        run: npm i -g serverless
+      - name: Install plugins
+        run: serverless plugin install -n serverless-python-requirements
+      - name: Install serverless wsgi
+        run: serverless plugin install -n serverless-wsgi
+      - name: serverless package
+        run: serverless package
+      - name: Deploy to Lambda
+        run: serverless deploy
