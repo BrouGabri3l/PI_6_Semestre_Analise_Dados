@@ -1,35 +1,45 @@
-name: Deploy the code
+name: Deploy Lambda Container
+
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-    env:
-      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          python-version: "3.10"
-      - uses: aws-actions/setup-sam@v2
-      - uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      - name: Install Serverless Framework
-        run: npm i -g serverless
-      - name: Install plugins
-        run: serverless plugin install -n serverless-python-requirements
-      - name: Install serverless wsgi
-        run: serverless plugin install -n serverless-wsgi
-      # - name: serverless package
-      #   run: serverless package
-      - name: Deploy to Lambda
-        run: serverless deploy
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        run: |
+          aws ecr get-login-password --region us-east-1 | \
+          docker login --username AWS --password-stdin 173534767554.dkr.ecr.us-east-1.amazonaws.com
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: 173534767554.dkr.ecr.us-east-1.amazonaws.com
+          IMAGE_REPO_NAME: pi6-airplay-knn
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$IMAGE_REPO_NAME:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$IMAGE_REPO_NAME:$IMAGE_TAG
+
+      - name: Update Lambda function to use new image
+        env:
+          ECR_REGISTRY: 173534767554.dkr.ecr.us-east-1.amazonaws.com
+          IMAGE_REPO_NAME: pi6-airplay-knn
+          IMAGE_TAG: latest
+        run: |
+          aws lambda update-function-code \
+            --function-name pi6-airplay-knn-func \
+            --image-uri $ECR_REGISTRY/$IMAGE_REPO_NAME:$IMAGE_TAG
