@@ -3,30 +3,70 @@ import ast
 import pandas as pd
 import numpy as np
 import pickle
-
+import io
+import boto3
 from sklearn.metrics.pairwise import cosine_distances
 from utils import WEIGHTS
-
+from dotenv import load_dotenv
 class Recommender:
     def __init__(self, data_path='cleaned.csv', model_dir='models', top_k=5):
         database_df = pd.read_csv(data_path, converters={"genres_list": ast.literal_eval,"categories_list": ast.literal_eval,"tags_list": ast.literal_eval, "publisher_list": ast.literal_eval}
 )
-        
+        mapeamento = {
+    "mlb_genres.pkl":        "mlb_genres",
+    "mlb_categories.pkl":    "mlb_categories",
+    "mlb_tags.pkl":          "mlb_tags",
+    "tfidf_tags.pkl":        "tfidf",
+    "scaler.pkl":            "scaler",
+    "pca.pkl":               "pca",
+    "knn_pca_tags.pkl":      "knn",
+    "HASher.pkl":           "publisher_hasher"
+}
         df = database_df.drop(columns=["header_image", "short_description"])
         self.df = df
         self.database_df = database_df
         self.top_k = top_k
 
-        # Carregamento de arquivos
-        self.mlb_genres     = pickle.load(open(os.path.join(model_dir,'mlb_genres.pkl'),'rb'))
-        self.mlb_categories = pickle.load(open(os.path.join(model_dir,'mlb_categories.pkl'),'rb'))
-        self.mlb_tags       = pickle.load(open(os.path.join(model_dir,'mlb_tags.pkl'),'rb'))
-        self.tfidf          = pickle.load(open(os.path.join(model_dir,'tfidf_tags.pkl'),'rb'))
-        self.scaler         = pickle.load(open(os.path.join(model_dir,'scaler.pkl'),'rb'))
-        self.pca            = pickle.load(open(os.path.join(model_dir,'pca.pkl'),'rb'))
-        self.knn            = pickle.load(open(os.path.join(model_dir,'knn_pca_tags.pkl'),'rb'))
-        self.publisher_hasher = pickle.load(open(os.path.join(model_dir,'HASher .pkl'),'rb'))
-    
+
+        # Carregamento de arquivos local
+        # self.mlb_genres     = pickle.load(open(os.path.join(model_dir,'mlb_genres.pkl'),'rb'))
+        # self.mlb_categories = pickle.load(open(os.path.join(model_dir,'mlb_categories.pkl'),'rb'))
+        # self.mlb_tags       = pickle.load(open(os.path.join(model_dir,'mlb_tags.pkl'),'rb'))
+        # self.tfidf          = pickle.load(open(os.path.join(model_dir,'tfidf_tags.pkl'),'rb'))
+        # self.scaler         = pickle.load(open(os.path.join(model_dir,'scaler.pkl'),'rb'))
+        # self.pca            = pickle.load(open(os.path.join(model_dir,'pca.pkl'),'rb'))
+        # self.knn            = pickle.load(open(os.path.join(model_dir,'knn_pca_tags.pkl'),'rb'))
+        # self.publisher_hasher = pickle.load(open(os.path.join(model_dir,'HASher .pkl'),'rb'))
+
+        # Carregamento de arquivos produção
+        load_dotenv() 
+
+        AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
+        AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
+        AWS_REGION = os.getenv("AWS_REGION")
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=AWS_KEY,
+            aws_secret_access_key=AWS_SECRET,
+            region_name=AWS_REGION
+        )
+        resposta = s3_client.list_objects_v2(Bucket="pi-6-iplay", Prefix="models/")
+        arquivos_s3 = {obj['Key'] for obj in resposta.get('Contents', [])}
+
+        for nome_arquivo, nome_atributo in mapeamento.items():
+            key_completa = f"{'models/'}{nome_arquivo}" if not nome_arquivo.startswith("models/") else nome_arquivo
+            if key_completa not in arquivos_s3:
+                print(f"[AVISO] Arquivo '{key_completa}' não encontrado no S3.")
+                setattr(self, nome_atributo, None)
+                continue
+
+            buffer = io.BytesIO()
+            s3_client.download_fileobj("pi-6-iplay", key_completa, buffer)
+            buffer.seek(0)
+            obj = pickle.load(buffer)
+            setattr(self, nome_atributo, obj)
+            print(f"Atributo '{nome_atributo}' carregado do arquivo '{key_completa}'.")
+
         # Binarização
         G = self.mlb_genres.transform(df['genres_list']) * WEIGHTS['genres']
         C = self.mlb_categories.transform(df['categories_list']) * WEIGHTS['categories']
