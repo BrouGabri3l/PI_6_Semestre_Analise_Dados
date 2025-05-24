@@ -73,4 +73,26 @@ pickle.dump(tfidf,          open(os.path.join(model_dir,'tfidf_tags.pkl'),'wb'))
 pickle.dump(pca,            open(os.path.join(model_dir,'pca.pkl'),'wb'))
 pickle.dump(knn,            open(os.path.join(model_dir,'knn_pca_tags.pkl'),'wb'))
 pickle.dump(HASher ,  open(os.path.join(model_dir,'HASher .pkl'),'wb'))
+from dotenv import load_dotenv
+import boto3
+load_dotenv() 
+
+AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_REGION = os.getenv("AWS_REGION")
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=AWS_KEY,
+    aws_secret_access_key=AWS_SECRET,
+    region_name=AWS_REGION
+)
+s3_client.upload_file(os.path.join(model_dir,'mlb_genres.pkl'), "pi-6-iplay",  os.path.join(model_dir,'mlb_genres.pkl'))
+s3_client.upload_file(os.path.join(model_dir,'mlb_categories.pkl'), "pi-6-iplay",  os.path.join(model_dir,'mlb_categories.pkl'))
+s3_client.upload_file(os.path.join(model_dir,'mlb_tags.pkl'), "pi-6-iplay",  os.path.join(model_dir,'mlb_tags.pkl'))
+s3_client.upload_file(os.path.join(model_dir,'scaler.pkl'), "pi-6-iplay",  os.path.join(model_dir,'scaler.pkl'))
+s3_client.upload_file(os.path.join(model_dir,'tfidf_tags.pkl'), "pi-6-iplay",  os.path.join(model_dir,'tfidf_tags.pkl'))
+s3_client.upload_file(os.path.join(model_dir,'pca.pkl'), "pi-6-iplay",  os.path.join(model_dir,'pca.pkl'))
+s3_client.upload_file(os.path.join(model_dir,'knn_pca_tags.pkl'), "pi-6-iplay",  os.path.join(model_dir,'knn_pca_tags.pkl'))
+s3_client.upload_file(os.path.join(model_dir,'HASher .pkl'), "pi-6-iplay", os.path.join(model_dir,'HASher.pkl'))
+
 print('Modelos avaliados e salvos em', model_dir)
