@@ -9,7 +9,9 @@ Swagger(app)
 
 @app.route('/ping', methods=['GET'])
 def ping():
-  return "Pong"
+  return  jsonify({
+        'message': "Pong"
+    }), 200
 
 @app.route('/recommend', methods=['POST'])
 def recommend_route():
