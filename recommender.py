@@ -8,23 +8,49 @@ import boto3
 from sklearn.metrics.pairwise import cosine_distances
 from utils import WEIGHTS
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
+
 class Recommender:
     def __init__(self, data_path='cleaned.csv', model_dir='models', top_k=5):
-        database_df = pd.read_csv(data_path, converters={"genres_list": ast.literal_eval,"categories_list": ast.literal_eval,"tags_list": ast.literal_eval, "publisher_list": ast.literal_eval}
-)
+        load_dotenv() 
+
+        # Montar a string de conexão
+        self.db_url = (
+            f"postgresql+psycopg2://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}"
+            f"@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DATABASE')}"
+        )
+
+        # Criar engine
+        self.engine = create_engine(self.db_url)
+        # Conectar ao banco e puxar os dados direto pro DataFrame
+       
+        # chunks = pd.read_sql('SELECT * FROM public."Games"', engine, chunksize=1000
+        #                             #   converters={"genres_list": ast.literal_eval,"categories_list": ast.literal_eval,"tags_list": ast.literal_eval, "publisher_list": ast.literal_eval}
+        #                                 )
+        # dfs = []
+        # row_count = pd.read_sql('SELECT COUNT(*) AS total FROM public."Games"', engine)
+        # total_rows = row_count.iloc[0]['total']
+        # step = 10000
+        # for offset in range(0, total_rows, step):
+        #     sql = f'SELECT * FROM public."Games" ORDER BY game_id LIMIT {step} OFFSET {offset} '
+        #     chunk = pd.read_sql(sql, engine)
+        #     dfs.append(chunk)
+
+        # database_df = pd.concat(dfs, ignore_index=True)
+        # print(database_df.head())
         mapeamento = {
-    "mlb_genres.pkl":        "mlb_genres",
-    "mlb_categories.pkl":    "mlb_categories",
-    "mlb_tags.pkl":          "mlb_tags",
-    "tfidf_tags.pkl":        "tfidf",
-    "scaler.pkl":            "scaler",
-    "pca.pkl":               "pca",
-    "knn_pca_tags.pkl":      "knn",
-    "HASher.pkl":           "publisher_hasher"
-}
-        df = database_df.drop(columns=["header_image", "short_description"])
-        self.df = df
-        self.database_df = database_df
+            "mlb_genres.pkl":        "mlb_genres",
+            "mlb_categories.pkl":    "mlb_categories",
+            "mlb_tags.pkl":          "mlb_tags",
+            "tfidf_tags.pkl":        "tfidf",
+            "scaler.pkl":            "scaler",
+            "pca.pkl":               "pca",
+            "knn_pca_tags.pkl":      "knn",
+            "HASher.pkl":           "publisher_hasher"
+        }
+        # df = database_df.drop(columns=["header_image", "short_description"])
+        # self.df = df
+        # self.database_df = database_df
         self.top_k = top_k
 
 
@@ -39,7 +65,6 @@ class Recommender:
         # self.publisher_hasher = pickle.load(open(os.path.join(model_dir,'HASher .pkl'),'rb'))
 
         # Carregamento de arquivos produção
-        load_dotenv() 
 
         AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
         AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -68,26 +93,26 @@ class Recommender:
             print(f"Atributo '{nome_atributo}' carregado do arquivo '{key_completa}'.")
 
         # Binarização
-        G = self.mlb_genres.transform(df['genres_list']) * WEIGHTS['genres']
-        C = self.mlb_categories.transform(df['categories_list']) * WEIGHTS['categories']
-        Tb = self.mlb_tags.transform(df['tags_list'])
-        T = self.tfidf.transform(Tb).toarray() * WEIGHTS['tags']
-        P = df[['windows','linux','mac']].astype(int).values * WEIGHTS['platforms']
-        Pub = self.publisher_hasher.transform(df['publisher_list']).toarray()
-        features = np.hstack([G,
-                               C,
-                               T,
-                               P,
-                               Pub])
-        X_scaled = self.scaler.transform(features)
-        self.X_pca = self.pca.transform(X_scaled)
+        # G = self.mlb_genres.transform(df['genres_list']) * WEIGHTS['genres']
+        # C = self.mlb_categories.transform(df['categories_list']) * WEIGHTS['categories']
+        # Tb = self.mlb_tags.transform(df['tags_list'])
+        # T = self.tfidf.transform(Tb).toarray() * WEIGHTS['tags']
+        # P = df[['windows','linux','mac']].astype(int).values * WEIGHTS['platforms']
+        # Pub = self.publisher_hasher.transform(df['publisher_list']).toarray()
+        # features = np.hstack([G,
+        #                        C,
+        #                        T,
+        #                        P,
+        #                        Pub])
+        # X_scaled = self.scaler.transform(features)
+        # self.X_pca = self.pca.transform(X_scaled)
 
     def recommend(self, user_genres, user_categories, user_played_ids, user_platforms, played_tags, user_publishers):
         ug = self.mlb_genres.transform([user_genres]) * WEIGHTS['genres']
         uc = self.mlb_categories.transform([user_categories]) * WEIGHTS['categories']
         up = self.publisher_hasher.transform([user_publishers]).toarray()
         for pid in user_played_ids:
-            row = self.df[self.df['appid'] == pid]
+            row = pd.read_sql(f'SELECT game_id AS total FROM public."Games" WHERE game_id = {pid}', self.engine)
             if not row.empty:
                 played_tags.extend(row.iloc[0]['tags_list'])
         unique_tags = list(set(played_tags)) if played_tags else []

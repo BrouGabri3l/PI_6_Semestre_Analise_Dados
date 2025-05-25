@@ -7,6 +7,10 @@ reco = load_recommender()
 app = Flask(__name__)
 Swagger(app)
 
+@app.route('/ping', methods=['GET'])
+def ping():
+  return "Pong"
+
 @app.route('/recommend', methods=['POST'])
 def recommend_route():
     """
