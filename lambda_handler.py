@@ -1,8 +1,5 @@
 from main import app
+import serverless_wsgi
 
 def handler(event, context):
-    from awslambdaric.lambda_context import LambdaContext
-    from mangum import Mangum
-
-    asgi_handler = Mangum(app)
-    return asgi_handler(event, context)
+    return serverless_wsgi.handle_request(app, event, context)
