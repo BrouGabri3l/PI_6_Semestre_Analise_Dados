@@ -66,14 +66,14 @@ class Recommender:
 
         # Carregamento de arquivos produção
 
-        AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
-        AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
-        AWS_REGION = os.getenv("AWS_REGION")
+        # AWS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
+        # AWS_SECRET = os.getenv("AWS_SECRET_ACCESS_KEY")
+        # AWS_REGION = os.getenv("AWS_REGION")
         s3_client = boto3.client(
-            's3',
-            aws_access_key_id=AWS_KEY,
-            aws_secret_access_key=AWS_SECRET,
-            region_name=AWS_REGION
+            's3'
+            # aws_access_key_id=AWS_KEY,
+            # aws_secret_access_key=AWS_SECRET,
+            # region_name=AWS_REGION
         )
         resposta = s3_client.list_objects_v2(Bucket="pi-6-iplay", Prefix="models/")
         arquivos_s3 = {obj['Key'] for obj in resposta.get('Contents', [])}
