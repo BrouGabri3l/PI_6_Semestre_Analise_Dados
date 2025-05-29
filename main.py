@@ -87,21 +87,21 @@ def recommend_route():
 
     )
     # Filtrar detalhes diretamente do dataset
-    rec_rows = reco.database_df[reco.database_df['appid'].isin(rec_ids)]
+    # rec_rows = reco.database_df[reco.database_df['appid'].isin(rec_ids)]
     # Construir lista de dicionários com campos relevantes
-    details = []
-    for _, row in rec_rows.iterrows():
-        details.append({
-            'appid': int(row.appid),
-            'name': row["name"],
-            'genres': row.genres_list,
-            'categories': row.categories_list,
-            'operational_systems':{ **{col: bool(row[col]) for col in ['windows','linux','mac'] if col in row}}
-        }
-)
+    # details = []
+    # for _, row in rec_rows.iterrows():
+    #     details.append({
+    #         'appid': int(row.appid),
+    #         'name': row["name"],
+    #         'genres': row.genres_list,
+    #         'categories': row.categories_list,
+    #         'operational_systems':{ **{col: bool(row[col]) for col in ['windows','linux','mac'] if col in row}}
+    #     }
+# )
     return jsonify({
         'recommendation_ids': rec_ids,
-        'recommendations': details
+        # 'recommendations': details
     })
 
 @app.route('/games', methods=['GET'])
@@ -197,11 +197,6 @@ def list_games():
         })
 
     return jsonify({
-        'page':        page,
-        'per_page':    per_page,
-        'total':       total,
-        'total_pages': total_pages,
-        'games':       games
     })
 
 @app.route('/games/<int:game_id>', methods=['GET'])
