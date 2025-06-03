@@ -9,14 +9,14 @@ from sklearn.metrics.pairwise import cosine_distances
 from utils import WEIGHTS
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-
+import urllib.parse
 class Recommender:
     def __init__(self, data_path='cleaned.csv', model_dir='models', top_k=5):
         load_dotenv() 
 
         # Montar a string de conexão
         self.db_url = (
-            f"postgresql+psycopg2://{os.getenv('PG_USER')}:{os.getenv('PG_PASSWORD')}"
+            f"postgresql+psycopg2://{os.getenv('PG_USER')}:{urllib.parse.quote(os.getenv('PG_PASSWORD'))}"
             f"@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/{os.getenv('PG_DATABASE')}"
         )
 
@@ -111,8 +111,10 @@ class Recommender:
         ug = self.mlb_genres.transform([user_genres]) * WEIGHTS['genres']
         uc = self.mlb_categories.transform([user_categories]) * WEIGHTS['categories']
         up = self.publisher_hasher.transform([user_publishers]).toarray()
-        for pid in user_played_ids:
-            row = pd.read_sql(f'SELECT game_id AS total FROM public."Games" WHERE game_id = {pid}', self.engine)
+
+        for pid in user_played_ids:           
+            row = pd.read_sql(f'SELECT game_id AS total, tags AS tags_list FROM public."Games" WHERE game_id = {pid}', self.engine)
+
             if not row.empty:
                 played_tags.extend(row.iloc[0]['tags_list'])
         unique_tags = list(set(played_tags)) if played_tags else []
@@ -129,9 +131,10 @@ class Recommender:
         dists, idxs = self.knn.kneighbors(vec_pca, n_neighbors=self.top_k + len(user_played_ids) + 5)
         recs = []
         for i in idxs.flatten():
-            aid = int(self.df.loc[i,'appid'])
-            if aid not in user_played_ids:
-                recs.append(aid)
+            finded_row = pd.read_sql(f'SELECT game_id FROM public."Games" WHERE idx = {i}', self.engine)
+            row_game_id = int(finded_row.iloc[0]['game_id'])
+            if row_game_id not in user_played_ids:
+                recs.append(row_game_id)
                 if len(recs) >= self.top_k:
                     break
         return recs
