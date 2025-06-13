@@ -110,7 +110,7 @@ class Recommender:
     def recommend(self, user_genres, user_categories, user_played_ids, user_platforms, played_tags, user_publishers):
         ug = self.mlb_genres.transform([user_genres]) * WEIGHTS['genres']
         uc = self.mlb_categories.transform([user_categories]) * WEIGHTS['categories']
-        up = self.publisher_hasher.transform([user_publishers]).toarray()
+        up = self.publisher_hasher.transform([user_publishers]).toarray() * WEIGHTS["publishers"]
 
         for pid in user_played_ids:           
             row = pd.read_sql(f'SELECT game_id AS total, tags AS tags_list FROM public."Games" WHERE game_id = {pid}', self.engine)
@@ -128,13 +128,40 @@ class Recommender:
         vec_scaled = self.scaler.transform(vec)
         vec_pca = self.pca.transform(vec_scaled)
 
-        dists, idxs = self.knn.kneighbors(vec_pca, n_neighbors=self.top_k + len(user_played_ids) + 5)
-        recs = []
+        dists, idxs = self.knn.kneighbors(vec_pca, n_neighbors=self.top_k * 2 + len(user_played_ids))
+
+        user_pubs = [p.lower() for p in user_publishers]
+        same_pub_recs = []
+        other_recs = []
+
         for i in idxs.flatten():
-            finded_row = pd.read_sql(f'SELECT game_id FROM public."Games" WHERE idx = {i}', self.engine)
-            row_game_id = int(finded_row.iloc[0]['game_id'])
-            if row_game_id not in user_played_ids:
-                recs.append(row_game_id)
-                if len(recs) >= self.top_k:
-                    break
+            row = pd.read_sql(
+                    f'SELECT game_id, publishers FROM public."Games" WHERE idx = {i}',
+                    self.engine
+                )
+            row_game_id = int(row.iloc[0]['game_id'])
+            if row_game_id in user_played_ids:
+                continue
+            row_publishers = []
+            try:
+                row_publishers = ast.literal_eval(row.iloc[0]['publishers'])
+            except Exception:
+                pass
+            row_pubs_lower = [p.lower() for p in row_publishers]
+
+            if any(pub in row_pubs_lower for pub in user_pubs):
+                same_pub_recs.append(row_game_id)
+            else:
+                other_recs.append(row_game_id)
+
+            if len(same_pub_recs) >= self.top_k:
+                break
+
+        recs = same_pub_recs
+        for r in other_recs:
+            if len(recs) >= self.top_k:
+                break
+            if r not in recs:
+                recs.append(r)
+    
         return recs

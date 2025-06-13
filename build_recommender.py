@@ -43,7 +43,7 @@ P = df[['windows','linux','mac']].astype(int).values * WEIGHTS['platforms']
 
 HASher   = FeatureHasher(n_features=128, input_type='string')
 Pub_hash = HASher.transform(df['publisher_list']).toarray()  # gera (n_samples,128)
-Pub_hash = Pub_hash
+Pub_hash = Pub_hash * WEIGHTS["publishers"]
 features = np.hstack([G, C, T, P, Pub_hash])
 scaler = StandardScaler().fit(features)
 X_scaled = scaler.transform(features)
@@ -130,10 +130,7 @@ def run_all_tests(knn, X, df, k=10):
     for label_name in ['categories_list', 'genres_list', 'publisher_list', 'tags']:
         print(f"\nTesting with: {label_name}")
         labels_list = df[label_name]
-        if not any(has_positive(row) for row in labels_list):
-            print(f"Atenção: Nenhum positivo em {label_name}! Pulando métricas.")
-            results[label_name] = None
-            continue
+     
         precision = precision_at_k(knn, X, labels_list, k)
         print(f'Precision@{k}: {precision:.3f}')
         div = diversity(knn, X, k)
@@ -182,16 +179,16 @@ def plot_radar(results, k=10):
     plt.show()
 
 print(df.columns)
-results = run_all_tests(knn, X_pca, df, k=10)
+# results = run_all_tests(knn, X_pca, df, k=10)
 
-# Exibir resultados
-for label, metrics in results.items():
-    print(f"\nResults for {label}:")
-    for metric_name, value in metrics.items():
-        print(f"{metric_name}: {value:.3f}")
+# # Exibir resultados
+# for label, metrics in results.items():
+#     print(f"\nResults for {label}:")
+#     for metric_name, value in metrics.items():
+#         print(f"{metric_name}: {value:.3f}")
 
-# Gerar gráfico radar comparativo
-test_plot = plot_radar(results, k=10)
+# # Gerar gráfico radar comparativo
+# test_plot = plot_radar(results, k=10)
 
 pickle.dump(mlb_genres,     open(os.path.join(model_dir,'mlb_genres.pkl'),'wb'))
 pickle.dump(mlb_categories, open(os.path.join(model_dir,'mlb_categories.pkl'),'wb'))
