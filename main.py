@@ -73,13 +73,18 @@ def recommend_route():
     """
     data = request.get_json(force=True)
     # Obter IDs recomendados
+    played_tags = []
+    for item in data.get("game_styles", []) + data.get('camera_perspective', []) + data.get('game_modes', []):
+      parts = [part.strip().lower() for part in item.split("|")]
+      played_tags.extend(parts)
+
     rec_ids = reco.recommend(
         user_genres=data.get('genres', []),
         user_categories=data.get('categories', []),
         user_played_ids=data.get('played_games_ids', []),
         # favorite_games=data.get('favorite_games')
-        user_platforms=data.get('operational_systems', []),
-        played_tags=data.get('game_styles', []) + data.get('camera_perspective', []),
+        user_platforms= [item.lower() for item in data.get("operational_systems", [])],
+        played_tags=played_tags,
         user_publishers=data.get("publishers", [])
         # user_game_modes=data.get('game_modes', []),
         # user_game_styles=data.get('game_styles', []),
