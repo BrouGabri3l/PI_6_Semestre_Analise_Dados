@@ -17,6 +17,11 @@
 <p>O sistema toma como base os games da Steam do mês de março por um dataset disponibilizado no <a href="https://www.kaggle.com/datasets/artermiloff/steam-games-dataset">Kaggle</a>. Com base nisso, é utilizado algumas libs do Python como KNN, TF-IDF e LOO-CV, para fazer a recomendação de jogos com base em dados do último quiz do usuário. Tudo isso foi integrado em uma API usando Flask para ser consumida no backend.
 
 
+## Relatório
+<p>Acesse um pequeno relatório com o código executável no Colab</p>
+<p><a href="https://colab.research.google.com/drive/1kxZXjxsnmyDPDgNTMgyqIvFrAwLtlUd8#scrollTo=qS9xxPCZ7e0n">Relatório Colab</a></br></p>
+
+
 ## Documentação
 <p>Acesse a documentação da API no link</p>
 <p><a href="https://en5btlz7ne.execute-api.us-east-1.amazonaws.com/prod/apidocs/">Documentação da API - Flasgger</a></br></p>
